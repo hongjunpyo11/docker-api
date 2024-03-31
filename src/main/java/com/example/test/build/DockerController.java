@@ -19,8 +19,8 @@ public class DockerController {
     private List<Integer>[] graph;
 
     @PostMapping("/findPathToZero")
-    public ResponseEntity<List<Integer>> findPathToZero(@RequestBody Input input) {
-        List<Integer> pathToZero = new ArrayList<>();
+    public ResponseEntity<List<List<Integer>>> findPathToZero(@RequestBody Input input) {
+        List<List<Integer>> allPathsToZero = new ArrayList<>();
         List<Node> selectNodeList = input.getSelectNodeList();
         List<Integer> selectedNodes = new ArrayList<>();
         for (Node node : selectNodeList) {
@@ -41,17 +41,18 @@ public class DockerController {
             graph[source].add(target);
         }
 
-        // 0으로 도달 가능한지 확인하기 위해 선택된 노드들로부터 DFS 수행
+        // 선택된 각 노드로부터 0으로 가는 경로 찾기
         for (int node : selectedNodes) {
             boolean[] visited = new boolean[graph.length];
+            List<Integer> pathToZero = new ArrayList<>();
             if (dfsToZero(node, visited, pathToZero)) {
                 pathToZero.add(node); // 0으로 가는 경로에 해당 노드 추가
                 Collections.reverse(pathToZero); // 역순으로 반환
-                return new ResponseEntity<>(pathToZero, HttpStatus.OK);
+                allPathsToZero.add(pathToZero);
             }
         }
 
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 경로를 찾지 못한 경우
+        return new ResponseEntity<>(allPathsToZero, HttpStatus.OK);
     }
 
     private boolean dfsToZero(int node, boolean[] visited, List<Integer> pathToZero) {
@@ -61,6 +62,7 @@ public class DockerController {
         visited[node] = true;
         for (int neighbor : graph[node]) {
             if (!visited[neighbor] && dfsToZero(neighbor, visited, pathToZero)) {
+                System.out.println("neighbor = " + neighbor);
                 pathToZero.add(neighbor); // 경로에 해당 노드 추가
                 return true;
             }
