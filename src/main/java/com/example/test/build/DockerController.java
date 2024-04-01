@@ -73,6 +73,7 @@ public class DockerController {
     public ResponseEntity<Map<Integer, List<List<Integer>>>> test(@RequestBody Input input) {
         Map<Integer, List<List<Integer>>> allPathsToZeroMap = new HashMap<>();
         List<Node> allNodeList = input.getAllNodeList();
+        System.out.println("allNodeList.size() = " + allNodeList.size());
 
         // 그래프 초기화
         int numNodes = allNodeList.size(); // 주어진 노드의 개수
@@ -114,5 +115,93 @@ public class DockerController {
         // 백트래킹
         visited[node] = false;
         currentPath.remove(currentPath.size() - 1);
+    }
+
+    @PostMapping("/findShortestPathToZero")
+    public ResponseEntity<List<List<Integer>>> findShortestPathToZero(@RequestBody Input input) {
+        List<Node> selectNodeList = input.getSelectNodeList();
+        List<Node> allNodeList = input.getAllNodeList();
+
+        // 그래프 초기화
+        List<List<Integer>> graph = initializeGraph(allNodeList);
+
+        // 선택된 각 노드로부터 0으로 가는 최단 경로 찾기
+        List<List<Integer>> allShortestPathsToZero = new ArrayList<>();
+        for (Node selectNode : selectNodeList) {
+            int startNode = Integer.parseInt(selectNode.getSelectNode());
+            List<Integer> shortestPathToZero = findShortestPathToZero(graph, startNode);
+            allShortestPathsToZero.add(shortestPathToZero);
+        }
+
+        return new ResponseEntity<>(allShortestPathsToZero, HttpStatus.OK);
+    }
+
+    private List<List<Integer>> initializeGraph(List<Node> allNodeList) {
+        int numNodes = calculateNumNodes(allNodeList);
+        List<List<Integer>> graph = new ArrayList<>(numNodes);
+        for (int i = 0; i < numNodes; i++) {
+            graph.add(new ArrayList<>());
+        }
+        for (Node node : allNodeList) {
+            int source = Integer.parseInt(node.getSourceNode());
+            int target = Integer.parseInt(node.getTargetNode());
+            graph.get(source).add(target);
+            graph.get(target).add(source); // 양방향 통신이므로 반대 방향도 추가
+        }
+        return graph;
+    }
+
+    private int calculateNumNodes(List<Node> allNodeList) {
+        int maxNode = 0;
+        for (Node node : allNodeList) {
+            int source = Integer.parseInt(node.getSourceNode());
+            int target = Integer.parseInt(node.getTargetNode());
+            maxNode = Math.max(maxNode, Math.max(source, target));
+        }
+        return maxNode + 1;
+    }
+
+    private List<Integer> findShortestPathToZero(List<List<Integer>> graph, int startNode) {
+        int numNodes = graph.size();
+        boolean[] visited = new boolean[numNodes];
+        int[] distance = new int[numNodes];
+        int[] parent = new int[numNodes];
+
+        // 초기화
+        for (int i = 0; i < numNodes; i++) {
+            distance[i] = Integer.MAX_VALUE;
+            parent[i] = -1;
+        }
+
+        // 너비 우선 탐색
+        List<Integer> shortestPath = new ArrayList<>();
+        Queue<Integer> queue = new LinkedList<>();
+        queue.add(startNode);
+        visited[startNode] = true;
+        distance[startNode] = 0;
+
+        while (!queue.isEmpty()) {
+            int currentNode = queue.poll();
+            if (currentNode == 0) { // 0에 도착하면 최단 경로 반환
+                int node = 0; // 목적지 노드
+                while (node != startNode) {
+                    shortestPath.add(node);
+                    node = parent[node];
+                }
+                shortestPath.add(startNode);
+                Collections.reverse(shortestPath);
+                return shortestPath;
+            }
+            for (int neighbor : graph.get(currentNode)) {
+                if (!visited[neighbor]) {
+                    visited[neighbor] = true;
+                    distance[neighbor] = distance[currentNode] + 1;
+                    parent[neighbor] = currentNode;
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        return shortestPath; // 0에 도달하지 못한 경우 빈 리스트 반환
     }
 }
