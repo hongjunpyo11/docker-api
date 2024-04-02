@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.*;
 
 @RestController
-@RequiredArgsConstructor
 public class DockerController {
     private List<Integer>[] graph;
 
@@ -69,8 +68,8 @@ public class DockerController {
     }
 
 
-    @PostMapping("/test")
-    public ResponseEntity<Map<Integer, List<List<Integer>>>> test(@RequestBody Input input) {
+    @PostMapping("/testv2")
+    public ResponseEntity<Map<Integer, List<List<Integer>>>> testv2(@RequestBody Input input) {
         Map<Integer, List<List<Integer>>> allPathsToZeroMap = new HashMap<>();
         List<Node> allNodeList = input.getAllNodeList();
         System.out.println("allNodeList.size() = " + allNodeList.size());
@@ -204,4 +203,5 @@ public class DockerController {
 
         return shortestPath; // 0에 도달하지 못한 경우 빈 리스트 반환
     }
+
 }
