@@ -2,11 +2,18 @@ package com.example.test.build;
 
 import com.example.test.Input;
 import com.example.test.Node;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
@@ -38,6 +45,7 @@ public class TestController {
             int source = Integer.parseInt(node.getSourceNode());
             int target = Integer.parseInt(node.getTargetNode());
             graph.get(source).add(target);
+            graph.get(target).add(source);
         }
 
         // 선택된 각 노드로부터 0으로 가는 경로 찾기
@@ -102,5 +110,55 @@ public class TestController {
             index2++;
         }
         return index1 == path1.size();
+    }
+
+    @RequestMapping("jsonReconstruction")
+    public Map<String, List<Map<String, List<Map<String, String>>>>> jsonReconstruction(@RequestBody Node node) throws JsonProcessingException, ParseException {
+        JSONArray input = node.getInput();
+        JSONArray jsonArray = new JSONArray();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JSONParser parser = new JSONParser();
+        for (int i = 0; i < input.size(); i++) {
+            String s = objectMapper.writeValueAsString(input.get(i));
+            JSONObject parse = (JSONObject) parser.parse(s);
+            jsonArray.add(parse);
+        }
+        Map<String, List<Map<String, List<Map<String, String>>>>> resultMap = new HashMap<>();
+
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JSONObject obj = (JSONObject) jsonArray.get(i);
+            String title = obj.get("title").toString();
+            String onedepth = "";
+            String twodepth = "";
+            onedepth = obj.get("ondepth").toString();
+
+            if (obj.get("twodepth") != null) {
+                twodepth = obj.get("twodepth").toString();
+            }
+
+            if (!resultMap.containsKey(title)) {
+                resultMap.put(title, new ArrayList<>());
+            }
+
+            List<Map<String, List<Map<String, String>>>> titleList = resultMap.get(title);
+            boolean added = false;
+            for (Map<String, List<Map<String, String>>> titleMap : titleList) {
+                if (titleMap.containsKey(onedepth)) {
+                    titleMap.get(onedepth).add(Map.of("twodepth", twodepth));
+                    added = true;
+                    break;
+                }
+            }
+            if (!added) {
+                Map<String, List<Map<String, String>>> onedepthMap = new HashMap<>();
+                List<Map<String, String>> twodepthList = new ArrayList<>();
+                twodepthList.add(Map.of("twodepth", twodepth));
+                onedepthMap.put(onedepth, twodepthList);
+                titleList.add(onedepthMap);
+            }
+        }
+
+        return resultMap;
     }
 }
